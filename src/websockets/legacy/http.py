@@ -12,7 +12,7 @@ __all__ = ["read_request", "read_response"]
 
 MAX_HEADERS = 128
 MAX_LINE = 8192
-
+STRICT_CHECK_CRLF = False
 
 def d(value: bytes) -> str:
     """
@@ -196,6 +196,6 @@ async def read_line(stream: asyncio.StreamReader) -> bytes:
     if len(line) > MAX_LINE:
         raise SecurityError("line too long")
     # Not mandatory but safe - https://www.rfc-editor.org/rfc/rfc7230.html#section-3.5
-    if not line.endswith(b"\r\n"):
+    if STRICT_CHECK_CRLF and not line.endswith(b"\r\n"):
         raise EOFError("line without CRLF")
     return line[:-2]
