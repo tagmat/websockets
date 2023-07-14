@@ -7,7 +7,6 @@ from typing import Callable, Generator, Optional
 
 from . import datastructures, exceptions
 
-
 # Maximum total size of headers is around 128 * 8 KiB = 1 MiB.
 MAX_HEADERS = 128
 
@@ -17,7 +16,12 @@ MAX_LINE = 8192
 
 # Support for HTTP response bodies is intended to read an error message
 # returned by a server. It isn't designed to perform large file transfers.
-MAX_BODY = 2**20  # 1 MiB
+MAX_BODY = 2 ** 20  # 1 MiB
+
+# To make CRLF check optional as mentioned "...a recipient MAY recognize a single LF as a line
+# terminator and ignore any preceding CR.".
+# See. https://www.rfc-editor.org/rfc/rfc7230.html#section-3.5
+STRICT_CHECK_CRLF = False
 
 
 def d(value: bytes) -> str:
@@ -75,8 +79,8 @@ class Request:
 
     @classmethod
     def parse(
-        cls,
-        read_line: Callable[[int], Generator[None, None, bytes]],
+            cls,
+            read_line: Callable[[int], Generator[None, None, bytes]],
     ) -> Generator[None, None, Request]:
         """
         Parse a WebSocket handshake request.
@@ -179,10 +183,10 @@ class Response:
 
     @classmethod
     def parse(
-        cls,
-        read_line: Callable[[int], Generator[None, None, bytes]],
-        read_exact: Callable[[int], Generator[None, None, bytes]],
-        read_to_eof: Callable[[int], Generator[None, None, bytes]],
+            cls,
+            read_line: Callable[[int], Generator[None, None, bytes]],
+            read_exact: Callable[[int], Generator[None, None, bytes]],
+            read_to_eof: Callable[[int], Generator[None, None, bytes]],
     ) -> Generator[None, None, Response]:
         """
         Parse a WebSocket handshake response.
@@ -287,7 +291,7 @@ class Response:
 
 
 def parse_headers(
-    read_line: Callable[[int], Generator[None, None, bytes]],
+        read_line: Callable[[int], Generator[None, None, bytes]],
 ) -> Generator[None, None, datastructures.Headers]:
     """
     Parse HTTP headers.
@@ -338,7 +342,7 @@ def parse_headers(
 
 
 def parse_line(
-    read_line: Callable[[int], Generator[None, None, bytes]],
+        read_line: Callable[[int], Generator[None, None, bytes]],
 ) -> Generator[None, None, bytes]:
     """
     Parse a single line.
@@ -359,6 +363,6 @@ def parse_line(
     except RuntimeError:
         raise exceptions.SecurityError("line too long")
     # Not mandatory but safe - https://www.rfc-editor.org/rfc/rfc7230.html#section-3.5
-    if not line.endswith(b"\r\n"):
+    if STRICT_CHECK_CRLF and not line.endswith(b"\r\n"):
         raise EOFError("line without CRLF")
     return line[:-2]
